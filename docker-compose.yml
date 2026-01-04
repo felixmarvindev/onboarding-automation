@@ -1,0 +1,167 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: onboarding-postgres
+    environment:
+      POSTGRES_DB: onboarding_db
+      POSTGRES_USER: onboarding_user
+      POSTGRES_PASSWORD: onboarding_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U onboarding_user -d onboarding_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - onboarding-network
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: onboarding-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - onboarding-network
+
+  onboarding-api:
+    build:
+      context: .
+      dockerfile: onboarding-api/Dockerfile
+    container_name: onboarding-api
+    environment:
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: guest
+      SPRING_RABBITMQ_PASSWORD: guest
+    ports:
+      - "8080:8080"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - onboarding-network
+
+  kyc-service:
+    build:
+      context: .
+      dockerfile: kyc-service/Dockerfile
+    container_name: kyc-service
+    environment:
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: guest
+      SPRING_RABBITMQ_PASSWORD: guest
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - onboarding-network
+
+  identity-service:
+    build:
+      context: .
+      dockerfile: identity-service/Dockerfile
+    container_name: identity-service
+    environment:
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: guest
+      SPRING_RABBITMQ_PASSWORD: guest
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - onboarding-network
+
+  provisioning-service:
+    build:
+      context: .
+      dockerfile: provisioning-service/Dockerfile
+    container_name: provisioning-service
+    environment:
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: guest
+      SPRING_RABBITMQ_PASSWORD: guest
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/onboarding_db
+      SPRING_DATASOURCE_USERNAME: onboarding_user
+      SPRING_DATASOURCE_PASSWORD: onboarding_pass
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - onboarding-network
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: notification-service/Dockerfile
+    container_name: notification-service
+    environment:
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: guest
+      SPRING_RABBITMQ_PASSWORD: guest
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - onboarding-network
+
+  completion-service:
+    build:
+      context: .
+      dockerfile: completion-service/Dockerfile
+    container_name: completion-service
+    environment:
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: guest
+      SPRING_RABBITMQ_PASSWORD: guest
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - onboarding-network
+
+  failure-handler:
+    build:
+      context: .
+      dockerfile: failure-handler/Dockerfile
+    container_name: failure-handler
+    environment:
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: guest
+      SPRING_RABBITMQ_PASSWORD: guest
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/onboarding_db
+      SPRING_DATASOURCE_USERNAME: onboarding_user
+      SPRING_DATASOURCE_PASSWORD: onboarding_pass
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - onboarding-network
+
+volumes:
+  postgres_data:
+
+networks:
+  onboarding-network:
+    driver: bridge

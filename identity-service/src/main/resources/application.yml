@@ -1,0 +1,13 @@
+spring:
+  application:
+    name: identity-service
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+
+logging:
+  level:
+    com.onboarding.identity: INFO
+    org.springframework.amqp: DEBUG

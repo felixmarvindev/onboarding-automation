@@ -1,0 +1,13 @@
+spring:
+  application:
+    name: completion-service
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+
+logging:
+  level:
+    com.onboarding.completion: INFO
+    org.springframework.amqp: DEBUG
