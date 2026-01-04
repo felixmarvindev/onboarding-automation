@@ -13,6 +13,12 @@ import java.util.Map;
 public class IdentityVerificationService {
     private static final Logger logger = LoggerFactory.getLogger(IdentityVerificationService.class);
 
+    private final ErrorTriggerService errorTriggerService;
+
+    public IdentityVerificationService(ErrorTriggerService errorTriggerService) {
+        this.errorTriggerService = errorTriggerService;
+    }
+
     @Retryable(
             value = {RuntimeException.class},
             maxAttempts = 3,
@@ -20,6 +26,13 @@ public class IdentityVerificationService {
     )
     public Map<String, Object> verifyIdentity(String requestId, Map<String, Object> kycData) {
         logger.info("Verifying identity for requestId: {}", requestId);
+
+        // Check for error triggers
+        String customerId = (String) kycData.get("customerId");
+        if (customerId != null && errorTriggerService.shouldFail(customerId)) {
+            logger.error("Identity verification failed for customer: {}", customerId);
+            throw new RuntimeException("Identity verification failed: Biometric mismatch");
+        }
 
         // Simulate identity verification (document validation)
         try {
@@ -33,6 +46,11 @@ public class IdentityVerificationService {
         identityData.put("biometricMatch", true);
         identityData.put("documentAuthenticity", "VERIFIED");
         identityData.put("livenessCheck", "PASSED");
+        
+        // Pass through customer data from KYC
+        if (kycData != null) {
+            identityData.putAll(kycData);
+        }
 
         logger.info("Identity verification completed for requestId: {}", requestId);
         return identityData;

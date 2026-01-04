@@ -13,6 +13,12 @@ import java.util.Map;
 public class KycProcessingService {
     private static final Logger logger = LoggerFactory.getLogger(KycProcessingService.class);
 
+    private final ErrorTriggerService errorTriggerService;
+
+    public KycProcessingService(ErrorTriggerService errorTriggerService) {
+        this.errorTriggerService = errorTriggerService;
+    }
+
     @Retryable(
             value = {RuntimeException.class},
             maxAttempts = 3,
@@ -20,6 +26,12 @@ public class KycProcessingService {
     )
     public Map<String, Object> processKyc(String customerId, Map<String, Object> customerData) {
         logger.info("Processing KYC for customer: {}", customerId);
+
+        // Check for error triggers
+        if (errorTriggerService.isBlacklisted(customerId)) {
+            logger.error("KYC processing failed: Customer {} is blacklisted", customerId);
+            throw new RuntimeException("KYC processing failed: Customer is blacklisted");
+        }
 
         // Simulate external KYC service call with delay
         try {
@@ -33,6 +45,11 @@ public class KycProcessingService {
         kycData.put("kycLevel", "BASIC");
         kycData.put("status", "APPROVED");
         kycData.put("documentVerified", true);
+        
+        // Pass through customer data from original request
+        if (customerData != null) {
+            kycData.putAll(customerData);
+        }
 
         logger.info("KYC processing completed for customer: {}", customerId);
         return kycData;

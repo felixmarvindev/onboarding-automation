@@ -2,12 +2,30 @@ spring:
   application:
     name: notification-service
   rabbitmq:
-    host: localhost
-    port: 5672
-    username: guest
-    password: guest
+    host: ${SPRING_RABBITMQ_HOST:localhost}
+    port: ${SPRING_RABBITMQ_PORT:5672}
+    username: ${SPRING_RABBITMQ_USERNAME:guest}
+    password: ${SPRING_RABBITMQ_PASSWORD:guest}
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+
+onboarding:
+  email:
+    from: ${MAIL_FROM:noreply@example.com}
+    from-name: ${MAIL_FROM_NAME:Onboarding System}
 
 logging:
   level:
     com.onboarding.notification: INFO
     org.springframework.amqp: DEBUG
+    org.springframework.mail: DEBUG

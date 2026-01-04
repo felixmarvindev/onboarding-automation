@@ -2,10 +2,18 @@ spring:
   application:
     name: kyc-service
   rabbitmq:
-    host: localhost
-    port: 5672
-    username: guest
-    password: guest
+    host: ${SPRING_RABBITMQ_HOST:localhost}
+    port: ${SPRING_RABBITMQ_PORT:5672}
+    username: ${SPRING_RABBITMQ_USERNAME:guest}
+    password: ${SPRING_RABBITMQ_PASSWORD:guest}
+
+error-triggers:
+  kyc:
+    blacklist-customer-ids:
+      - "BLACKLIST-001"
+      - "BLACKLIST-002"
+      - "BLACKLIST-003"
+    failure-pattern: "FAIL-KYC-*"
 
 logging:
   level:

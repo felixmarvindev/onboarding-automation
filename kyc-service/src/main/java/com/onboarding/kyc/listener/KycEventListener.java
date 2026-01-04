@@ -2,6 +2,7 @@ package com.onboarding.kyc.listener;
 
 import com.onboarding.events.EventRoutingKeys;
 import com.onboarding.events.KYCCompletedEvent;
+import com.onboarding.events.KYCFailedEvent;
 import com.onboarding.events.OnboardingRequestedEvent;
 import com.onboarding.kyc.config.RabbitMQConfig;
 import com.onboarding.kyc.service.KycProcessingService;
@@ -50,7 +51,9 @@ public class KycEventListener {
 
             logger.info("Published KYCCompletedEvent for requestId: {}", event.getRequestId());
         } catch (Exception e) {
-            logger.error("Error processing KYC for requestId: {}", event.getRequestId(), e);
+            logger.error("KYC processing failed after retries for requestId: {}", event.getRequestId(), e);
+            // Publish failure event (will be sent to DLQ if listener fails)
+            // Failure Handler will process from DLQ
             throw new RuntimeException("KYC processing failed", e);
         }
     }

@@ -60,4 +60,9 @@ public class FailureHandlerService {
         rabbitTemplate.convertAndSend("onboarding.exchange", EventRoutingKeys.ONBOARDING_FAILED, failedEvent);
         logger.info("Published OnboardingFailedEvent for requestId: {}", requestId);
     }
+
+    @Transactional
+    public void recordFailure(String requestId, String stage, String errorMessage, int retryCount) {
+        saveFailure(requestId, stage, "SERVICE_ERROR", errorMessage, retryCount);
+    }
 }

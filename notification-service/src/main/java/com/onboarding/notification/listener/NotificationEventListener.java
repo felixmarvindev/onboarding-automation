@@ -11,6 +11,8 @@ import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Component;
 
+import java.util.Map;
+
 @Component
 public class NotificationEventListener {
     private static final Logger logger = LoggerFactory.getLogger(NotificationEventListener.class);
@@ -29,10 +31,16 @@ public class NotificationEventListener {
                 event.getRequestId(), event.getAccountId());
 
         try {
+            // Extract customer email from account details or event
+            String customerEmail = extractCustomerEmail(event.getAccountDetails());
+            Map<String, Object> enhancedDetails = new java.util.HashMap<>(event.getAccountDetails());
+            enhancedDetails.put("customerEmail", customerEmail);
+            enhancedDetails.put("customerName", extractCustomerName(event.getAccountDetails()));
+
             String deliveryStatus = notificationService.sendNotification(
                     event.getRequestId(),
                     event.getAccountId(),
-                    event.getAccountDetails()
+                    enhancedDetails
             );
 
             NotificationSentEvent sentEvent = new NotificationSentEvent(

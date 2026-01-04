@@ -24,6 +24,13 @@ public class ProvisioningService {
         this.accountRepository = accountRepository;
     }
 
+    private final ErrorTriggerService errorTriggerService;
+
+    public ProvisioningService(AccountRepository accountRepository, ErrorTriggerService errorTriggerService) {
+        this.accountRepository = accountRepository;
+        this.errorTriggerService = errorTriggerService;
+    }
+
     @Transactional
     @Retryable(
             value = {RuntimeException.class},
@@ -32,6 +39,12 @@ public class ProvisioningService {
     )
     public Map<String, Object> provisionAccount(String requestId, String customerId, Map<String, Object> identityData) {
         logger.info("Provisioning account for requestId: {}, customerId: {}", requestId, customerId);
+
+        // Check for error triggers
+        if (errorTriggerService.shouldFail(customerId)) {
+            logger.error("Provisioning failed: Database constraint violation for customer: {}", customerId);
+            throw new RuntimeException("Account provisioning failed: Database constraint violation");
+        }
 
         // Simulate account provisioning
         try {
@@ -52,6 +65,12 @@ public class ProvisioningService {
         accountDetails.put("customerId", customerId);
         accountDetails.put("status", "ACTIVE");
         accountDetails.put("accountType", "STANDARD");
+        
+        // Pass through customer data from identity verification
+        if (identityData != null) {
+            accountDetails.put("customerEmail", identityData.get("email"));
+            accountDetails.put("customerName", identityData.get("name"));
+        }
 
         return accountDetails;
     }
