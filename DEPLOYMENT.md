@@ -19,7 +19,7 @@ This approach transfers only the built images (typically 100-300MB each) instead
 
 ## Quick Start
 
-### Option 1: Using Docker Hub (Recommended for beginners)
+### Option 1: Using Git Sparse-Checkout (Recommended - Only downloads needed files)
 
 1. **Build and push images locally:**
    ```bash
@@ -30,12 +30,59 @@ This approach transfers only the built images (typically 100-300MB each) instead
    ./scripts/build-and-push.sh docker.io yourusername v1.0.0
    ```
 
+2. **On your VPS, clone only deployment files and deploy:**
+   
+   **Method A: Direct git sparse-checkout (Simplest):**
+   ```bash
+   # Clone repository with sparse-checkout enabled
+   git clone --filter=blob:none --sparse https://github.com/yourusername/onboarding-automation.git
+   cd onboarding-automation
+   
+   # Configure which files to checkout (only deployment files)
+   git sparse-checkout set docker-compose.prod.yml scripts/deploy-on-vps.sh notification-service/.env
+   
+   # Deploy
+   chmod +x scripts/deploy-on-vps.sh
+   export DOCKER_REGISTRY=docker.io
+   export DOCKER_USERNAME=yourusername
+   export IMAGE_TAG=v1.0.0
+   docker login
+   docker-compose -f docker-compose.prod.yml pull
+   docker-compose -f docker-compose.prod.yml up -d
+   ```
+   
+   **Method B: Using helper script:**
+   ```bash
+   chmod +x scripts/clone-deployment-files.sh
+   ./scripts/clone-deployment-files.sh https://github.com/yourusername/onboarding-automation.git main
+   cd onboarding-deployment
+   chmod +x scripts/deploy-on-vps.sh
+   ./scripts/deploy-on-vps.sh docker.io yourusername v1.0.0
+   ```
+   
+   **Method C: All-in-one script:**
+   ```bash
+   chmod +x scripts/deploy-via-git.sh
+   ./scripts/deploy-via-git.sh https://github.com/yourusername/onboarding-automation.git main docker.io yourusername v1.0.0
+   ```
+
+### Option 2: Manual File Transfer
+
+1. **Build and push images locally:**
+   ```bash
+   chmod +x scripts/build-and-push.sh
+   ./scripts/build-and-push.sh docker.io yourusername v1.0.0
+   ```
+
 2. **On your VPS, deploy:**
    ```bash
-   # Make script executable
-   chmod +x scripts/deploy-on-vps.sh
+   # Copy files manually
+   scp docker-compose.prod.yml user@your-vps:/path/to/deployment/
+   scp scripts/deploy-on-vps.sh user@your-vps:/path/to/deployment/
+   scp -r notification-service/.env user@your-vps:/path/to/deployment/notification-service/
    
-   # Pull and deploy (replace 'yourusername' with your Docker Hub username)
+   # On VPS
+   chmod +x scripts/deploy-on-vps.sh
    ./scripts/deploy-on-vps.sh docker.io yourusername v1.0.0
    ```
 
@@ -84,12 +131,21 @@ This approach transfers only the built images (typically 100-300MB each) instead
 
 #### Step 2: Deploy on VPS
 
-1. **Copy only necessary files to VPS:**
+**Option A: Using Git Sparse-Checkout (Recommended)**
+
+1. **Clone only deployment files:**
    ```bash
-   # On your local machine, copy only deployment files
-   scp docker-compose.prod.yml user@your-vps:/path/to/deployment/
-   scp scripts/deploy-on-vps.sh user@your-vps:/path/to/deployment/
-   scp -r notification-service/.env user@your-vps:/path/to/deployment/notification-service/  # if exists
+   # On VPS, clone only the files you need
+   git clone --filter=blob:none --sparse https://github.com/yourusername/onboarding-automation.git
+   cd onboarding-automation
+   git sparse-checkout set docker-compose.prod.yml scripts/deploy-on-vps.sh notification-service/.env
+   ```
+
+   Or use the provided script:
+   ```bash
+   chmod +x scripts/clone-deployment-files.sh
+   ./scripts/clone-deployment-files.sh https://github.com/yourusername/onboarding-automation.git main
+   cd onboarding-deployment
    ```
 
 2. **On VPS, set environment variables:**
@@ -182,9 +238,31 @@ You only need these files on your VPS:
 
 **You do NOT need:**
 - Source code (.java files)
-- Dockerfiles
+- Dockerfiles (they're only used for building, not deployment)
 - pom.xml files
 - Any other source files
+
+### Using Git Sparse-Checkout
+
+Git sparse-checkout allows you to clone only specific files/directories from a repository, which is perfect for deployment:
+
+```bash
+# Clone repository with sparse-checkout
+git clone --filter=blob:none --sparse https://github.com/yourusername/onboarding-automation.git
+cd onboarding-automation
+
+# Configure which files to checkout
+git sparse-checkout set docker-compose.prod.yml scripts/deploy-on-vps.sh notification-service/.env
+
+# Now only these files are checked out (no source code!)
+ls -la
+```
+
+**Benefits:**
+- Only downloads ~10KB instead of entire repository
+- No source code on VPS
+- Easy to update: just `git pull`
+- Keeps deployment files in sync with repository
 
 ## Image Size Optimization
 
