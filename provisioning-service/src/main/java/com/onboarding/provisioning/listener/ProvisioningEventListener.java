@@ -58,8 +58,11 @@ public class ProvisioningEventListener {
     }
 
     private String extractCustomerId(String requestId, Map<String, Object> identityData) {
-        // In a real system, this would be in the identity data
-        // For now, we'll generate a customer ID from the requestId
+        // Extract customer ID from identity data (it flows through from the original request)
+        if (identityData != null && identityData.containsKey("customerId")) {
+            return (String) identityData.get("customerId");
+        }
+        // Fallback: generate from requestId if not found
         return "CUST-" + requestId.substring(0, 8);
     }
 }

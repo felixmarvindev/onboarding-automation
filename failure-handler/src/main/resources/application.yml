@@ -20,6 +20,18 @@ spring:
     username: guest
     password: guest
 
+server:
+  port: 8086
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when-authorized
+
 logging:
   level:
     com.onboarding.failure: INFO

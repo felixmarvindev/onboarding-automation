@@ -19,11 +19,6 @@ public class ProvisioningService {
     private static final Logger logger = LoggerFactory.getLogger(ProvisioningService.class);
 
     private final AccountRepository accountRepository;
-
-    public ProvisioningService(AccountRepository accountRepository) {
-        this.accountRepository = accountRepository;
-    }
-
     private final ErrorTriggerService errorTriggerService;
 
     public ProvisioningService(AccountRepository accountRepository, ErrorTriggerService errorTriggerService) {

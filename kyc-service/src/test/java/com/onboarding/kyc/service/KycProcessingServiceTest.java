@@ -1,5 +1,6 @@
 package com.onboarding.kyc.service;
 
+import com.onboarding.events.ErrorTriggerProperties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -14,7 +15,9 @@ class KycProcessingServiceTest {
 
     @BeforeEach
     void setUp() {
-        kycProcessingService = new KycProcessingService();
+        ErrorTriggerProperties errorTriggerProperties = new ErrorTriggerProperties();
+        ErrorTriggerService errorTriggerService = new ErrorTriggerService(errorTriggerProperties);
+        kycProcessingService = new KycProcessingService(errorTriggerService);
     }
 
     @Test

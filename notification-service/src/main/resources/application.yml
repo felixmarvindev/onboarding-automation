@@ -19,6 +19,18 @@ spring:
             enable: true
             required: true
 
+server:
+  port: 8084
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when-authorized
+
 onboarding:
   email:
     from: ${MAIL_FROM:noreply@example.com}

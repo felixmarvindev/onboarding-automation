@@ -57,6 +57,32 @@ public class RabbitMQConfig {
     }
 
     @Bean
+    public Queue kycInitiatedNotificationQueue() {
+        return QueueBuilder.durable("kyc.initiated.notification.queue").build();
+    }
+
+    @Bean
+    public Queue kycSuccessfulNotificationQueue() {
+        return QueueBuilder.durable("kyc.successful.notification.queue").build();
+    }
+
+    @Bean
+    public Binding kycInitiatedNotificationBinding() {
+        return BindingBuilder
+                .bind(kycInitiatedNotificationQueue())
+                .to(onboardingExchange())
+                .with(EventRoutingKeys.ONBOARDING_REQUESTED);
+    }
+
+    @Bean
+    public Binding kycSuccessfulNotificationBinding() {
+        return BindingBuilder
+                .bind(kycSuccessfulNotificationQueue())
+                .to(onboardingExchange())
+                .with(EventRoutingKeys.KYC_COMPLETED);
+    }
+
+    @Bean
     public MessageConverter jsonMessageConverter() {
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
@@ -75,6 +101,8 @@ public class RabbitMQConfig {
         SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
         factory.setConnectionFactory(connectionFactory);
         factory.setMessageConverter(jsonMessageConverter());
+        // Don't requeue rejected messages - let them go to DLQ
+        factory.setDefaultRequeueRejected(false);
         return factory;
     }
 }

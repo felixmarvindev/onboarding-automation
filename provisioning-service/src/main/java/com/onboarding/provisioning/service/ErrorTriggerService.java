@@ -19,6 +19,7 @@ public class ErrorTriggerService {
 
     public boolean shouldFail(String customerId) {
         List<String> failureIds = errorTriggerProperties.getProvisioning().getFailureCustomerIds();
+        logger.info("Failure customer ids: {}", failureIds);
         if (failureIds.contains(customerId)) {
             logger.warn("Provisioning failure triggered for customer: {}", customerId);
             return true;

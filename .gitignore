@@ -43,6 +43,12 @@ report/
 application-local.yml
 application-dev.yml
 
+# Environment files
+.env
+.env.local
+.env.*.local
+!.env.example
+
 # JaCoCo
 jacoco.exec
 *.exec

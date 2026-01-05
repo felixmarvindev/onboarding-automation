@@ -1,6 +1,5 @@
 package com.onboarding.failure.listener;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.onboarding.events.*;
 import com.onboarding.failure.config.RabbitMQConfig;
 import com.onboarding.failure.service.FailureHandlerService;
@@ -19,12 +18,10 @@ public class DlqEventListener {
 
     private final FailureHandlerService failureHandlerService;
     private final RabbitTemplate rabbitTemplate;
-    private final ObjectMapper objectMapper;
 
-    public DlqEventListener(FailureHandlerService failureHandlerService, RabbitTemplate rabbitTemplate, ObjectMapper objectMapper) {
+    public DlqEventListener(FailureHandlerService failureHandlerService, RabbitTemplate rabbitTemplate) {
         this.failureHandlerService = failureHandlerService;
         this.rabbitTemplate = rabbitTemplate;
-        this.objectMapper = objectMapper;
     }
 
     @RabbitListener(queues = "kyc.dlq")
@@ -79,9 +76,26 @@ public class DlqEventListener {
         try {
             // Try to deserialize the message body to extract requestId
             Object payload = rabbitTemplate.getMessageConverter().fromMessage(message);
-            if (payload instanceof Map) {
-                Map<String, Object> map = (Map<String, Object>) payload;
-                return (String) map.get("requestId");
+            
+            // Check if it's a BaseEvent or event with requestId field
+            if (payload != null) {
+                try {
+                    // Use reflection to get requestId from event object
+                    java.lang.reflect.Method getRequestIdMethod = payload.getClass().getMethod("getRequestId");
+                    Object requestId = getRequestIdMethod.invoke(payload);
+                    if (requestId != null) {
+                        return requestId.toString();
+                    }
+                } catch (Exception e) {
+                    // Fallback to Map extraction
+                    if (payload instanceof Map) {
+                        Map<String, Object> map = (Map<String, Object>) payload;
+                        Object requestId = map.get("requestId");
+                        if (requestId != null) {
+                            return requestId.toString();
+                        }
+                    }
+                }
             }
         } catch (Exception e) {
             logger.warn("Could not extract requestId from message", e);
