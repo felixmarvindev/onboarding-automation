@@ -23,7 +23,14 @@ export DOCKER_REGISTRY=${DOCKER_REGISTRY}
 export DOCKER_USERNAME=${DOCKER_USERNAME}
 export IMAGE_TAG=${IMAGE_TAG}
 
+# Set default postgres connection if not set
+export POSTGRES_HOST=${POSTGRES_HOST:-host.docker.internal}
+export POSTGRES_PORT=${POSTGRES_PORT:-5432}
+export POSTGRES_USERNAME=${POSTGRES_USERNAME:-onboarding_user}
+export POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-onboarding_pass}
+
 echo "Pulling images from ${DOCKER_REGISTRY}/${DOCKER_USERNAME} with tag ${IMAGE_TAG}"
+echo "Postgres host: ${POSTGRES_HOST}:${POSTGRES_PORT}"
 
 # Login to Docker registry if needed
 echo "Make sure you're logged into the Docker registry:"

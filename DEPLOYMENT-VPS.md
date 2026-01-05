@@ -8,6 +8,7 @@ On your VPS, you need:
 - Git (version 2.25+ for sparse-checkout)
 - Docker
 - Docker Compose
+- Existing PostgreSQL database (or set up one)
 
 ## Quick Deployment
 
@@ -31,7 +32,44 @@ git sparse-checkout set docker-compose.prod.yml scripts/deploy-on-vps.sh notific
 
 No source code (.java files), no Dockerfiles, no pom.xml files - just what you need to deploy.
 
-### Step 2: Set Environment Variables
+### Step 2: Configure Database Connection
+
+The production docker-compose file uses an existing PostgreSQL database. Configure how to connect:
+
+**Option A: Postgres on host machine (default)**
+```bash
+export POSTGRES_HOST=host.docker.internal
+export POSTGRES_PORT=5432
+export POSTGRES_USERNAME=onboarding_user
+export POSTGRES_PASSWORD=onboarding_pass
+```
+
+**Option B: Postgres in existing container**
+```bash
+# Find your existing postgres container name
+docker ps | grep postgres
+
+# Use that container name
+export POSTGRES_HOST=your-existing-postgres-container-name
+export POSTGRES_PORT=5432
+export POSTGRES_USERNAME=onboarding_user
+export POSTGRES_PASSWORD=onboarding_pass
+```
+
+**Option C: Remote Postgres**
+```bash
+export POSTGRES_HOST=your-postgres-host-or-ip
+export POSTGRES_PORT=5432
+export POSTGRES_USERNAME=onboarding_user
+export POSTGRES_PASSWORD=onboarding_pass
+```
+
+**Note:** If postgres is in a different Docker network, you may need to:
+1. Connect postgres container to `onboarding-network`, or
+2. Use host networking mode, or
+3. Use the host's IP address instead of container name
+
+### Step 3: Set Environment Variables
 
 ```bash
 export DOCKER_REGISTRY=docker.io
@@ -43,13 +81,13 @@ Replace:
 - `yourusername` with your Docker Hub username
 - `v1.0.0` with your desired image tag
 
-### Step 3: Login to Docker Registry
+### Step 4: Login to Docker Registry
 
 ```bash
 docker login
 ```
 
-### Step 4: Deploy
+### Step 5: Deploy
 
 ```bash
 # Pull images and start services
@@ -59,6 +97,37 @@ docker-compose -f docker-compose.prod.yml up -d
 # Check status
 docker-compose -f docker-compose.prod.yml ps
 ```
+
+## Container Names
+
+All containers use unique names with the `onboarding-prod-` prefix:
+- `onboarding-prod-api`
+- `onboarding-prod-kyc`
+- `onboarding-prod-identity`
+- `onboarding-prod-provisioning`
+- `onboarding-prod-notification`
+- `onboarding-prod-completion`
+- `onboarding-prod-failure-handler`
+- `onboarding-prod-rabbitmq`
+
+This prevents conflicts with other deployments.
+
+## Connecting to Existing Postgres Container
+
+If your postgres is in a different Docker network, connect it:
+
+```bash
+# Find your postgres container
+docker ps | grep postgres
+
+# Connect it to the onboarding network
+docker network connect onboarding-automation_onboarding-network your-postgres-container-name
+
+# Then use the container name as POSTGRES_HOST
+export POSTGRES_HOST=your-postgres-container-name
+```
+
+Alternatively, if both are on the same host, use `host.docker.internal` (Linux) or the host's IP address.
 
 ## Updating Deployment Files
 
@@ -144,6 +213,43 @@ docker login
 # Or for GitHub Container Registry:
 echo $GITHUB_TOKEN | docker login ghcr.io -u USERNAME --password-stdin
 ```
+
+### Postgres connection issues
+
+**Problem: Cannot connect to postgres**
+
+Check:
+1. Postgres is running: `docker ps | grep postgres` or `systemctl status postgresql`
+2. Postgres is accessible from host: `psql -h localhost -U onboarding_user -d onboarding_db`
+3. Network connectivity:
+   - For host postgres: Use `host.docker.internal` (add `--add-host=host.docker.internal:host-gateway` to docker-compose if needed on Linux)
+   - For container postgres: Ensure it's on the same network or connected to `onboarding-network`
+   - For remote postgres: Verify firewall rules and network access
+
+**Linux: host.docker.internal not available**
+
+On Linux, add to docker-compose services that need postgres:
+```yaml
+extra_hosts:
+  - "host.docker.internal:host-gateway"
+```
+
+Or use the host's IP address instead:
+```bash
+export POSTGRES_HOST=$(hostname -I | awk '{print $1}')
+```
+
+### Port conflicts
+
+If ports are already in use, you can:
+1. Stop conflicting containers
+2. Change ports in docker-compose.prod.yml (e.g., `8080:8080` → `8081:8080`)
+
+### Container name conflicts
+
+All containers now use unique `onboarding-prod-` prefix. If you still have conflicts:
+1. Stop and remove old containers: `docker-compose -f docker-compose.prod.yml down`
+2. Remove containers manually: `docker rm container-name`
 
 ## Alternative: Manual File Copy
 
